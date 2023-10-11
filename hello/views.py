@@ -1,3 +1,5 @@
+from typing import List, Dict, Tuple
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -34,27 +36,27 @@ COMPLETIONS_API_PARAMS = {
     "model": COMPLETIONS_MODEL,
 }
 
-def get_embedding(text: str, model: str) -> list[float]:
+def get_embedding(text: str, model: str) -> List[float]:
     result = openai.Embedding.create(
       model=model,
       input=text
     )
     return result["data"][0]["embedding"]
 
-def get_doc_embedding(text: str) -> list[float]:
+def get_doc_embedding(text: str) -> List[float]:
     return get_embedding(text, DOC_EMBEDDINGS_MODEL)
 
-def get_query_embedding(text: str) -> list[float]:
+def get_query_embedding(text: str) -> List[float]:
     return get_embedding(text, QUERY_EMBEDDINGS_MODEL)
 
-def vector_similarity(x: list[float], y: list[float]) -> float:
+def vector_similarity(x: List[float], y: List[float]) -> float:
     """
     We could use cosine similarity or dot product to calculate the similarity between vectors.
     In practice, we have found it makes little difference.
     """
     return np.dot(np.array(x), np.array(y))
 
-def order_document_sections_by_query_similarity(query: str, contexts: dict[(str, str), np.array]) -> list[(float, (str, str))]:
+def order_document_sections_by_query_similarity(query: str, contexts: Dict[Tuple[str, str], np.array]) -> List[Tuple[float, Tuple[str, str]]]:
     """
     Find the query embedding for the supplied query, and compare it against all of the pre-calculated document embeddings
     to find the most relevant sections.
@@ -69,7 +71,7 @@ def order_document_sections_by_query_similarity(query: str, contexts: dict[(str,
 
     return document_similarities
 
-def load_embeddings(fname: str) -> dict[tuple[str, str], list[float]]:
+def load_embeddings(fname: str) -> Dict[Tuple[str, str], List[float]]:
     """
     Read the document embeddings and their keys from a CSV.
 
@@ -83,7 +85,7 @@ def load_embeddings(fname: str) -> dict[tuple[str, str], list[float]]:
            (r.title): [r[str(i)] for i in range(max_dim + 1)] for _, r in df.iterrows()
     }
 
-def construct_prompt(question: str, context_embeddings: dict, df: pd.DataFrame) -> tuple[str, str]:
+def construct_prompt(question: str, context_embeddings: dict, df: pd.DataFrame) -> Tuple[str, str]:
     """
     Fetch relevant embeddings
     """
@@ -124,8 +126,8 @@ def construct_prompt(question: str, context_embeddings: dict, df: pd.DataFrame) 
 def answer_query_with_context(
     query: str,
     df: pd.DataFrame,
-    document_embeddings: dict[(str, str), np.array],
-) -> tuple[str, str]:
+    document_embeddings: Dict[Tuple[str, str], np.array],
+) -> Tuple[str, str]:
     prompt, context = construct_prompt(
         query,
         document_embeddings,
